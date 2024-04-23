@@ -1,3 +1,4 @@
+using dotnet_rpg.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace dotnet_rpg.Controllers
@@ -6,27 +7,31 @@ namespace dotnet_rpg.Controllers
     [Route("api/[controller]")]
     public class CharacterController : ControllerBase
     {
-        private static readonly List<Character> Characters = new() 
+        private readonly ICharacterService _characterService;
+        
+        public CharacterController(ICharacterService characterService)
         {
-            new Character(),
-            new Character { Id = 1, Name = "Sam" }
-        };
+            _characterService = characterService;
+        }
 
         [HttpGet("GetAll")]
-        public ActionResult<List<Character>> Get()
+        public async Task<ActionResult<List<Character>>> Get()
         {
-            return Ok(Characters);
+            return Ok(await _characterService.GetAllCharacters());
             // return BadRequest("No character found"); // For example
         }
         
         [HttpGet("{id:int}")]
-        public ActionResult<List<Character>> GetSingle(int id)
+        public async Task<ActionResult<List<Character>>> GetSingle(int id)
         {
-            if (id < 0 || id >= Characters.Count)
-                return NotFound("Character not found");
-            
-            return Ok(Characters[id]);
+            return Ok( await _characterService.GetCharacterById(id));
             // return BadRequest("No character found"); // For example
+        }
+        
+        [HttpPost("AddCharacter")]
+        public async Task<ActionResult<List<Character>>> AddCharacter(Character character)
+        {
+            return Ok(await _characterService.AddCharacter(character));
         }
     }
 }
