@@ -1,4 +1,7 @@
-﻿namespace dotnet_rpg.Services.CharacterService;
+﻿using dotnet_rpg.Dtos.Character;
+using dotnet_rpg.Models;
+
+namespace dotnet_rpg.Services.CharacterService;
 
 public class CharacterService : ICharacterService
 {
@@ -8,24 +11,37 @@ public class CharacterService : ICharacterService
         new Character { Id = 1, Name = "Sam" }
     };
     
-    public async Task<List<Character>> GetAllCharacters()
+    public async Task<ServiceResponse<List<GetCharacterDto>>> GetAllCharacters()
     {
-        return Characters;
-    }
-
-    public async Task<Character> GetCharacterById(int id)
-    {
-        if (id < 0 || id >= Characters.Count)
+        return new ServiceResponse<List<GetCharacterDto>>()
         {
-            throw new Exception("Character not found");
+            Data = Characters,
+            Success = true,
+            Message = "Get all characters",
         };
-        
-        return Characters[id];
     }
 
-    public async Task<List<Character>> AddCharacter(Character character)
+    public async Task<ServiceResponse<GetCharacterDto>> GetCharacterById(int id)
+    {
+        Character? character = Characters.FirstOrDefault(c => c.Id == id);
+        
+        return new ServiceResponse<GetCharacterDto>()
+        {
+            Data = character,
+            Success = character != null,
+            Message = character == null ? "Index out of range" : "Get character by id",
+        };
+    }
+
+    public async Task<ServiceResponse<List<GetCharacterDto>>> AddCharacter(AddCharacterDto character)
     {
         Characters.Add(character);
-        return Characters;
+        
+        return new ServiceResponse<List<Character>>()
+        {
+            Data = Characters,
+            Success = true,
+            Message = "Add character",
+        };
     }
 }
