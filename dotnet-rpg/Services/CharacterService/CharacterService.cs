@@ -48,13 +48,13 @@ public class CharacterService : ICharacterService
     public async Task<ServiceResponse<List<GetCharacterDto>>> AddCharacter(AddCharacterDto character)
     {
         Character newCharacter = _mapper.Map<Character>(character);
-        newCharacter.Id = Characters.Max(c => c.Id) + 1;
 
-        Characters.Add(newCharacter);
+        _context.Characters.Add(newCharacter);
+        await _context.SaveChangesAsync();
 
         return new ServiceResponse<List<GetCharacterDto>>()
         {
-            Data = _mapper.Map<List<GetCharacterDto>>(Characters),
+            Data = _mapper.Map<List<GetCharacterDto>>(await _context.Characters.ToListAsync()),
             Success = true,
             Message = "Add character",
         };
@@ -64,7 +64,7 @@ public class CharacterService : ICharacterService
     {
         try
         {
-            Character? character = Characters.FirstOrDefault(c => c.Id == updatedCharacter.Id);
+            Character? character =  await _context.Characters.FirstOrDefaultAsync(c => c.Id == updatedCharacter.Id);
 
             if (character is null)
             {
@@ -77,6 +77,7 @@ public class CharacterService : ICharacterService
             }
             
             _mapper.Map(updatedCharacter, character);
+            await _context.SaveChangesAsync();
             
             // character.Name = updatedCharacter.Name;
             // character.HitPoints = updatedCharacter.HitPoints;
@@ -105,13 +106,30 @@ public class CharacterService : ICharacterService
 
     public async Task<ServiceResponse<List<GetCharacterDto>>> DeleteCharacterWithId(int id)
     {
-        int removed = Characters.RemoveAll(c => c.Id == id);
-        
-        return new ServiceResponse<List<GetCharacterDto>>()
+        var serviceResponse = new ServiceResponse<List<GetCharacterDto>>();
+
+        try
         {
-            Data = Characters.Select(c => _mapper.Map<GetCharacterDto>(c)).ToList(),
-            Success = removed > 0,
-            Message = removed > 0 ? $"Delete character: {removed} character's removed" : "Character not found",
-        };
+            var character = await _context.Characters.FirstAsync(c => c.Id == id);
+            
+            if (character is null)
+            {
+                throw new Exception($"Character with Id '{id}' not found");
+            }
+            
+            _context.Characters.Remove(character);
+            await _context.SaveChangesAsync();
+
+            serviceResponse.Data = _mapper.Map<List<GetCharacterDto>>(await _context.Characters.ToListAsync());
+            serviceResponse.Success = true;
+            serviceResponse.Message = "Delete character";
+        }
+        catch (Exception e)
+        {
+            serviceResponse.Success = false;
+            serviceResponse.Message = e.Message;
+        }
+        
+        return serviceResponse;
     }
 }
