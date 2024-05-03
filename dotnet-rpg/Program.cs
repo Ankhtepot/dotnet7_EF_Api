@@ -5,6 +5,8 @@ using dotnet_rpg.Services;
 using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.Filters;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -19,7 +21,17 @@ builder.Services.AddDbContext<DataContext>(options =>
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(configuration =>
+{
+    configuration.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
+    {
+        Description = """Standard Authorization header using the Bearer scheme. Example: "bearer {token}" """,
+        In = ParameterLocation.Header,
+        Name = "Authorization",
+        Type = SecuritySchemeType.ApiKey,
+    });
+    configuration.OperationFilter<SecurityRequirementsOperationFilter>();
+});
 builder.Services.AddScoped<ICharacterService, CharacterService>();
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
 builder.Services.AddAutoMapper(typeof(Program).Assembly);
@@ -42,7 +54,7 @@ WebApplication app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();   
+    app.UseSwagger();
     app.UseSwaggerUI();
 }
 

@@ -9,21 +9,15 @@ public class CharacterService : ICharacterService
     private readonly IMapper _mapper;
     private readonly DataContext _context;
 
-    private static readonly List<Character> Characters = new()
-    {
-        new Character(),
-        new Character {Id = 1, Name = "Sam"}
-    };
-
     public CharacterService(IMapper mapper, DataContext context)
     {
         _mapper = mapper;
         _context = context;
     }
 
-    public async Task<ServiceResponse<List<GetCharacterDto>>> GetAllCharacters()
+    public async Task<ServiceResponse<List<GetCharacterDto>>> GetAllCharacters(int id)
     {
-        List<Character> dbCharacters = await _context.Characters.ToListAsync();
+        List<Character> dbCharacters = await _context.Characters.Where(ch => ch.User!.Id == id).ToListAsync();
         
         return new ServiceResponse<List<GetCharacterDto>>()
         {
