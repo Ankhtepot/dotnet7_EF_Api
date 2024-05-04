@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using dotnet_rpg.Dtos.Character;
 using dotnet_rpg.Dtos.User;
+using dotnet_rpg.Dtos.Weapon;
 using dotnet_rpg.Models;
 
 namespace dotnet_rpg;
@@ -15,5 +16,7 @@ public class AutoMapperProfile : Profile
         
         CreateMap<User, UserRegisterDto>();
         CreateMap<UserRegisterDto, User>();
+        
+        CreateMap<Weapon, GetWeaponDto>();
     }
 }

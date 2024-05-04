@@ -1,4 +1,6 @@
-﻿using AutoMapper;
+﻿using System.Linq.Expressions;
+using System.Security.Claims;
+using AutoMapper;
 using dotnet_rpg.Dtos.Character;
 using dotnet_rpg.Models;
 
@@ -8,17 +10,19 @@ public class CharacterService : ICharacterService
 {
     private readonly IMapper _mapper;
     private readonly DataContext _context;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public CharacterService(IMapper mapper, DataContext context)
+    public CharacterService(IMapper mapper, DataContext context, IHttpContextAccessor httpContextAccessor)
     {
         _mapper = mapper;
         _context = context;
+        _httpContextAccessor = httpContextAccessor;
     }
 
-    public async Task<ServiceResponse<List<GetCharacterDto>>> GetAllCharacters(int id)
+    public async Task<ServiceResponse<List<GetCharacterDto>>> GetAllCharacters()
     {
-        List<Character> dbCharacters = await _context.Characters.Where(ch => ch.User!.Id == id).ToListAsync();
-        
+        List<Character> dbCharacters = await _context.Characters.Where(CharacterIdMatchPredicate()).ToListAsync();
+
         return new ServiceResponse<List<GetCharacterDto>>()
         {
             Data = dbCharacters.Select(c => _mapper.Map<GetCharacterDto>(c)).ToList(),
@@ -29,7 +33,8 @@ public class CharacterService : ICharacterService
 
     public async Task<ServiceResponse<GetCharacterDto>> GetCharacterById(int id)
     {
-        Character? character = await _context.Characters.FirstOrDefaultAsync(c => c.Id == id);
+        int userId = GetUserId();
+        Character? character = await _context.Characters.FirstOrDefaultAsync(c => c.Id == id && c.User!.Id == userId);
 
         return new ServiceResponse<GetCharacterDto>()
         {
@@ -42,13 +47,15 @@ public class CharacterService : ICharacterService
     public async Task<ServiceResponse<List<GetCharacterDto>>> AddCharacter(AddCharacterDto character)
     {
         Character newCharacter = _mapper.Map<Character>(character);
+        newCharacter.User = await _context.Users.FirstOrDefaultAsync(UserIdMatchPredicate());
 
         _context.Characters.Add(newCharacter);
         await _context.SaveChangesAsync();
 
         return new ServiceResponse<List<GetCharacterDto>>()
         {
-            Data = _mapper.Map<List<GetCharacterDto>>(await _context.Characters.ToListAsync()),
+            Data = _mapper.Map<List<GetCharacterDto>>(await _context.Characters.Where(CharacterIdMatchPredicate())
+                .ToListAsync()),
             Success = true,
             Message = "Add character",
         };
@@ -58,9 +65,11 @@ public class CharacterService : ICharacterService
     {
         try
         {
-            Character? character =  await _context.Characters.FirstOrDefaultAsync(c => c.Id == updatedCharacter.Id);
+            Character? character = await _context.Characters
+                .Include(c => c.User)
+                .FirstOrDefaultAsync(c => c.Id == updatedCharacter.Id);
 
-            if (character is null)
+            if (character is null || character.User!.Id != GetUserId())
             {
                 return new ServiceResponse<GetCharacterDto>()
                 {
@@ -69,10 +78,10 @@ public class CharacterService : ICharacterService
                     Message = $"Character with Id '{updatedCharacter.Id}' not found",
                 };
             }
-            
+
             _mapper.Map(updatedCharacter, character);
             await _context.SaveChangesAsync();
-            
+
             // character.Name = updatedCharacter.Name;
             // character.HitPoints = updatedCharacter.HitPoints;
             // character.Strength = updatedCharacter.Strength;
@@ -100,21 +109,24 @@ public class CharacterService : ICharacterService
 
     public async Task<ServiceResponse<List<GetCharacterDto>>> DeleteCharacterWithId(int id)
     {
-        var serviceResponse = new ServiceResponse<List<GetCharacterDto>>();
+        ServiceResponse<List<GetCharacterDto>> serviceResponse = new();
 
         try
         {
-            var character = await _context.Characters.FirstAsync(c => c.Id == id);
-            
+            int userId = GetUserId();
+            Character character = await _context.Characters.FirstAsync(c => c.Id == id && c.User!.Id == userId);
+
             if (character is null)
             {
                 throw new Exception($"Character with Id '{id}' not found");
             }
-            
+
             _context.Characters.Remove(character);
             await _context.SaveChangesAsync();
 
-            serviceResponse.Data = _mapper.Map<List<GetCharacterDto>>(await _context.Characters.ToListAsync());
+            serviceResponse.Data =
+                _mapper.Map<List<GetCharacterDto>>(await _context.Characters.Where(CharacterIdMatchPredicate())
+                    .ToListAsync());
             serviceResponse.Success = true;
             serviceResponse.Message = "Delete character";
         }
@@ -123,7 +135,22 @@ public class CharacterService : ICharacterService
             serviceResponse.Success = false;
             serviceResponse.Message = e.Message;
         }
-        
+
         return serviceResponse;
+    }
+
+    private int GetUserId() =>
+        int.Parse(_httpContextAccessor.HttpContext!.User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+    private Expression<Func<Character, bool>> CharacterIdMatchPredicate()
+    {
+        int userId = GetUserId();
+        return ch => ch.User!.Id == userId;
+    }
+
+    private Expression<Func<User, bool>> UserIdMatchPredicate()
+    {
+        int userId = GetUserId();
+        return u => u.Id == userId;
     }
 }

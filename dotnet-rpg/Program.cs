@@ -2,6 +2,7 @@ global using dotnet_rpg.Services.CharacterService;
 global using Microsoft.EntityFrameworkCore;
 global using dotnet_rpg.Data;
 using dotnet_rpg.Services;
+using dotnet_rpg.Services.WesponService;
 using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -32,7 +33,11 @@ builder.Services.AddSwaggerGen(configuration =>
     });
     configuration.OperationFilter<SecurityRequirementsOperationFilter>();
 });
+
+builder.Services.AddHttpContextAccessor();
+
 builder.Services.AddScoped<ICharacterService, CharacterService>();
+builder.Services.AddScoped<IWeaponService, WeaponService>();
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
 builder.Services.AddAutoMapper(typeof(Program).Assembly);
 
