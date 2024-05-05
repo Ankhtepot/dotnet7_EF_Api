@@ -21,7 +21,10 @@ public class CharacterService : ICharacterService
 
     public async Task<ServiceResponse<List<GetCharacterDto>>> GetAllCharacters()
     {
-        List<Character> dbCharacters = await _context.Characters.Where(CharacterIdMatchPredicate()).ToListAsync();
+        List<Character> dbCharacters = await _context.Characters.Where(CharacterIdMatchPredicate())
+            .Include(c => c.Weapon)
+            .Include(c => c.Skills)
+            .ToListAsync();
 
         return new ServiceResponse<List<GetCharacterDto>>()
         {
@@ -34,7 +37,10 @@ public class CharacterService : ICharacterService
     public async Task<ServiceResponse<GetCharacterDto>> GetCharacterById(int id)
     {
         int userId = GetUserId();
-        Character? character = await _context.Characters.FirstOrDefaultAsync(c => c.Id == id && c.User!.Id == userId);
+        Character? character = await _context.Characters
+            .Include(c => c.Weapon)
+            .Include(c => c.Skills)
+            .FirstOrDefaultAsync(c => c.Id == id && c.User!.Id == userId);
 
         return new ServiceResponse<GetCharacterDto>()
         {
@@ -55,6 +61,8 @@ public class CharacterService : ICharacterService
         return new ServiceResponse<List<GetCharacterDto>>()
         {
             Data = _mapper.Map<List<GetCharacterDto>>(await _context.Characters.Where(CharacterIdMatchPredicate())
+                .Include(c => c.Weapon)
+                .Include(c => c.Skills)
                 .ToListAsync()),
             Success = true,
             Message = "Add character",
@@ -137,6 +145,51 @@ public class CharacterService : ICharacterService
         }
 
         return serviceResponse;
+    }
+
+    public async Task<ServiceResponse<GetCharacterDto>> AddCharacterSkill(AddCharacterSkillDto newCharacterSkill)
+    {
+        ServiceResponse<GetCharacterDto> response = new();
+
+        try
+        {
+            int userId = GetUserId();
+
+            Character? character = await _context.Characters
+                .Include(c => c.Weapon)
+                .Include(c => c.Skills)
+                .FirstOrDefaultAsync(c => c.Id == newCharacterSkill.CharacterId && c.User!.Id == userId);
+
+            if (character is null)
+            {
+                response.Success = false;
+                response.Message = $"Character with Id '{newCharacterSkill.CharacterId}' not found";
+                return response;
+            }
+
+            Skill? skill = await _context.Skills.FirstOrDefaultAsync(s => s.Id == newCharacterSkill.SkillId);
+
+            if (skill is null)
+            {
+                response.Success = false;
+                response.Message = $"Skill with Id '{newCharacterSkill.SkillId}' not found";
+                return response;
+            }
+
+            character.Skills!.Add(skill);
+            await _context.SaveChangesAsync();
+
+            response.Data = _mapper.Map<GetCharacterDto>(character);
+            response.Success = true;
+            response.Message = "Added character skill";
+        }
+        catch (Exception e)
+        {
+            response.Success = false;
+            response.Message = e.Message;
+        }
+
+        return response;
     }
 
     private int GetUserId() =>
