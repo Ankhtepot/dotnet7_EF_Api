@@ -1,12 +1,13 @@
 global using dotnet_rpg.Services.CharacterService;
 global using Microsoft.EntityFrameworkCore;
 global using dotnet_rpg.Data;
+global using dotnet_rpg.Services.FightService;
+global using dotnet_rpg.Services.WeaponService;
+global using Microsoft.OpenApi.Models;
 using dotnet_rpg.Services;
-using dotnet_rpg.Services.WesponService;
 using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.Filters;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
@@ -38,6 +39,7 @@ builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<ICharacterService, CharacterService>();
 builder.Services.AddScoped<IWeaponService, WeaponService>();
+builder.Services.AddScoped<IFightService, FightService>();
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
 builder.Services.AddAutoMapper(typeof(Program).Assembly);
 

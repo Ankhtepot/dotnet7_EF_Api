@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using dotnet_rpg.Dtos.Character;
+using dotnet_rpg.Dtos.Fight;
 using dotnet_rpg.Dtos.Skill;
 using dotnet_rpg.Dtos.User;
 using dotnet_rpg.Dtos.Weapon;
@@ -14,6 +15,7 @@ public class AutoMapperProfile : Profile
         CreateMap<Character, GetCharacterDto>();
         CreateMap<AddCharacterDto, Character>();
         CreateMap<UpdateCharacterDto, Character>();
+        CreateMap<Character, HighScoreDto>();
         
         CreateMap<User, UserRegisterDto>();
         CreateMap<UserRegisterDto, User>();
